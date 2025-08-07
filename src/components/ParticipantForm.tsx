@@ -38,12 +38,10 @@ import { SubmitHandler } from "react-hook-form";
 
 const participantSchema = z.object({
   nik: z
-    .string()
-    .min(16, "NIK harus berisi 16 digit")
-    .max(16, "NIK harus berisi 16 digit"),
+    .string(),
   name: z.string().min(1, "Nama lengkap diperlukan"),
   date_of_birth: z.string().min(1, "Tanggal lahir diperlukan"),
-  address: z.string().min(1, "Alamat lengkap diperlukan"),
+  address: z.string().min(0, "Alamat lengkap diperlukan"),
   bb: z.number().min(0, "Berat harus lebih dari 0"),
   tb: z.number().min(0, "Tinggi harus lebih dari 0"),
   lila: z.number().min(0, "LILA harus bernilai positif"),
