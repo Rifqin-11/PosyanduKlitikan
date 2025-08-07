@@ -1,28 +1,61 @@
-import { useState, useEffect } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from "react";
+import { User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Get the base URL for redirects
+  const getBaseUrl = () => {
+    if (typeof window !== "undefined") {
+      return window.location.origin;
+    }
+    return import.meta.env.VITE_SITE_URL || "http://localhost:5173";
+  };
+
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setUser(session?.user || null);
       setLoading(false);
     };
 
-    getSession();
+    // Handle email confirmation
+    const handleEmailConfirmation = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session) {
+        setUser(data.session.user);
+        // Clear URL hash after successful confirmation
+        if (window.location.hash) {
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+      }
+      setLoading(false);
+    };
+
+    // Check if there's a hash in the URL (from email confirmation)
+    if (window.location.hash && window.location.hash.includes("access_token")) {
+      handleEmailConfirmation();
+    } else {
+      getSession();
+    }
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_, session) => {
-        setUser(session?.user || null);
-        setLoading(false);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user || null);
+      setLoading(false);
+
+      // Clear URL hash after auth state change
+      if (window.location.hash && session) {
+        window.history.replaceState(null, "", window.location.pathname);
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -40,7 +73,7 @@ export function useAuth() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${getBaseUrl()}/`,
       },
     });
     return { error };
@@ -53,11 +86,10 @@ export function useAuth() {
 
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`, // Ganti sesuai halaman reset Anda
+      redirectTo: `${getBaseUrl()}/`,
     });
     return { error };
   };
-
 
   return {
     user,
@@ -67,5 +99,4 @@ export function useAuth() {
     signOut,
     resetPassword,
   };
-
 }

@@ -15,10 +15,9 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
 
 const authSchema = z.object({
-  login: z.string().min(3, "Masukkan username atau email"),
+  login: z.string().email("Masukkan alamat email yang valid"),
   password: z.string().min(6, "Kata sandi minimal 6 karakter"),
 });
 
@@ -35,44 +34,50 @@ export function AuthForm() {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
   } = useForm<AuthFormData>({ resolver: zodResolver(authSchema) });
 
   const handleForgotPassword = async () => {
-    const loginValue = getValues("login");
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
 
-    if (!loginValue.includes("@")) {
-      // Username → cari email
-      const { data, error } = await supabase
-        .from("users") // pastikan `users` ada dan punya kolom username+email
-        .select("email")
-        .eq("username", loginValue)
-        .single();
+    try {
+      const loginValue = getValues("login");
 
-      if (error || !data?.email) {
-        setError("Username tidak ditemukan.");
+      if (!loginValue || loginValue.trim() === "") {
+        setError("Silakan masukkan email atau username terlebih dahulu.");
+        setLoading(false);
         return;
       }
 
-      const { error: resetError } = await resetPassword(data.email);
-      if (resetError) {
-        setError(resetError.message);
+      const trimmedValue = loginValue.trim();
+
+      // Jika input berupa email, langsung gunakan
+      if (trimmedValue.includes("@")) {
+        const { error } = await resetPassword(trimmedValue);
+        if (error) {
+          setError(
+            "Gagal mengirim email reset password. Pastikan email sudah terdaftar."
+          );
+        } else {
+          setSuccess(
+            "Link reset kata sandi telah dikirim ke email Anda. Silakan periksa kotak masuk Anda."
+          );
+        }
       } else {
-        setSuccess("Link reset kata sandi dikirim ke email.");
+        // Jika input berupa username, asumsikan format email dengan domain default
+        // Atau bisa disesuaikan dengan kebutuhan sistem
+        setError(
+          "Silakan masukkan alamat email yang valid untuk reset password."
+        );
       }
-    } else {
-      // Langsung pakai email
-      const { error } = await resetPassword(loginValue);
-      if (error) {
-        setError(error.message);
-      } else {
-        setSuccess("Link reset kata sandi dikirim ke email.");
-      }
+    } catch {
+      setError("Terjadi kesalahan saat memproses permintaan reset password.");
+    } finally {
+      setLoading(false);
     }
   };
-
-  const { getValues } = useForm<AuthFormData>({
-    resolver: zodResolver(authSchema),
-  });
 
   const onSubmit = async (data: AuthFormData) => {
     setLoading(true);
@@ -81,27 +86,17 @@ export function AuthForm() {
 
     try {
       const loginInput = data.login.trim();
-      const isEmail = loginInput.includes("@");
-      let emailToUse = loginInput;
 
-      if (!isEmail) {
-        const { data: userData, error } = await supabase
-          .from("users")
-          .select("email")
-          .eq("username", loginInput)
-          .single();
-
-        if (error || !userData?.email) {
-          setError("Username tidak ditemukan.");
-          return;
-        }
-
-        emailToUse = userData.email;
+      // Untuk sementara, asumsi login harus menggunakan email
+      // Jika ingin support username, bisa ditambahkan logika mapping di masa depan
+      if (!loginInput.includes("@")) {
+        setError("Silakan gunakan alamat email untuk login.");
+        return;
       }
 
       const { error } = isLogin
-        ? await signIn(emailToUse, data.password)
-        : await signUp(emailToUse, data.password);
+        ? await signIn(loginInput, data.password)
+        : await signUp(loginInput, data.password);
 
       if (error) {
         setError(error.message);
@@ -141,11 +136,12 @@ export function AuthForm() {
                 htmlFor="login"
                 className="text-sm font-medium text-slate-700"
               >
-                Email atau Username
+                Alamat Email
               </Label>
               <Input
                 id="login"
-                placeholder="contoh: ibu123 atau ibu@mail.com"
+                type="email"
+                placeholder="contoh: nama@email.com"
                 className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                 {...register("login")}
                 disabled={loading}
@@ -178,14 +174,16 @@ export function AuthForm() {
                 </p>
               )}
               {isLogin && (
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  disabled={loading}
-                  className="text-sm text-blue-600 hover:text-blue-700 underline mt-1"
-                >
-                  Lupa kata sandi?
-                </button>
+                <div className="flex justify-end mt-2">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={loading}
+                    className="text-sm text-blue-600 hover:text-blue-700 underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                  >
+                    Lupa kata sandi?
+                  </button>
+                </div>
               )}
             </div>
 
