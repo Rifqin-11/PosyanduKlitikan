@@ -1,4 +1,6 @@
 import { useState } from "react";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import {
   Table,
   TableBody,
@@ -28,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Edit, Trash2, Users, Calendar } from "lucide-react";
+import { Edit, Trash2, Users, Calendar, Download } from "lucide-react";
 import { Participant } from "@/lib/supabase";
 import { format } from "date-fns";
 
@@ -79,6 +81,76 @@ export function ParticipantTable({
     return weight / (heightInMeters * heightInMeters);
   };
 
+  const getBMIStatus = (bmi: number) => {
+    if (bmi < 18.5) return "Kurus";
+    if (bmi < 25) return "Normal";
+    if (bmi < 30) return "Gemuk";
+    return "Obesitas";
+  };
+
+  const exportToExcel = () => {
+    // Prepare data for export
+    const exportData = filteredParticipants.map((participant, index) => ({
+      'No': index + 1,
+      'NIK': participant.nik,
+      'Nama Lengkap': participant.name,
+      'Tanggal Lahir': formatDate(participant.date_of_birth),
+      'Umur': calculateAge(participant.date_of_birth),
+      'Alamat': participant.address,
+      'Berat Badan (kg)': participant.bb,
+      'Tinggi Badan (cm)': participant.tb,
+      'BMI': calculateBMI(participant.bb, participant.tb).toFixed(1),
+      'Status BMI': getBMIStatus(calculateBMI(participant.bb, participant.tb)),
+      'LILA (cm)': participant.lila,
+      'GDS (mg/dL)': participant.gds,
+      'AU': participant.au,
+      'Imunisasi': participant.immunization,
+      'LP (cm)': participant.lp,
+      'TD (mmHg)': participant.td,
+      'HB (g/dL)': participant.hb,
+      'Kolesterol (mg/dL)': participant.chol,
+      'Tanggal Input': formatDate(participant.created_at),
+    }));
+
+    // Create workbook and worksheet
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Peserta');
+
+    // Set column widths
+    const colWidths = [
+      { wch: 5 },   // No
+      { wch: 18 },  // NIK
+      { wch: 25 },  // Nama
+      { wch: 15 },  // Tanggal Lahir
+      { wch: 8 },   // Umur
+      { wch: 30 },  // Alamat
+      { wch: 12 },  // BB
+      { wch: 12 },  // TB
+      { wch: 8 },   // BMI
+      { wch: 15 },  // Status BMI
+      { wch: 10 },  // LILA
+      { wch: 10 },  // GDS
+      { wch: 8 },   // AU
+      { wch: 15 },  // Imunisasi
+      { wch: 8 },   // LP
+      { wch: 12 },  // TD
+      { wch: 10 },  // HB
+      { wch: 15 },  // Kolesterol
+      { wch: 15 },  // Tanggal Input
+    ];
+    worksheet['!cols'] = colWidths;
+
+    // Generate file name with current date
+    const currentDate = format(new Date(), 'yyyy-MM-dd_HH-mm');
+    const fileName = `Data_Peserta_Posyandu_${currentDate}.xlsx`;
+
+    // Save file
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, fileName);
+  };
+
   const getBMICategory = (bmi: number) => {
     if (bmi === 0) return { text: "Tidak Ada", variant: "secondary" as const };
     if (bmi < 18.5) return { text: "Kurus", variant: "secondary" as const };
@@ -126,16 +198,29 @@ export function ParticipantTable({
     <>
       <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg">
-              <Users className="h-5 w-5 text-white" />
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+                Peserta ({filteredParticipants.length})
+              </CardTitle>
+              <CardDescription className="text-slate-600 mt-2">
+                Daftar peserta yang terdaftar di sistem. Anda dapat mencari,
+                mengedit, atau menghapus peserta.
+              </CardDescription>
             </div>
-            Peserta ({filteredParticipants.length})
-          </CardTitle>
-          <CardDescription className="text-slate-600">
-            Daftar peserta yang terdaftar di sistem. Anda dapat mencari,
-            mengedit, atau menghapus peserta.
-          </CardDescription>
+            <Button
+              onClick={exportToExcel}
+              variant="outline"
+              className="flex items-center gap-2 border-green-200 text-green-600 hover:bg-green-50 hover:border-green-300"
+              disabled={loading || filteredParticipants.length === 0}
+            >
+              <Download className="h-4 w-4" />
+              Export Excel
+            </Button>
+          </div>
           <div className="mt-4 flex flex-col sm:flex-row gap-4">
             <Input
               placeholder="Cari berdasarkan nama atau NIK..."
