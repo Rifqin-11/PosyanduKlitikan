@@ -76,12 +76,25 @@ export function Dashboard() {
   const handleAddParticipant = async (data: ParticipantFormData) => {
     setSubmitting(true);
     try {
-      const { error } = await supabase
+      // Pisahkan custom_fields dari data utama karena kolom ini belum ada di database
+      const { custom_fields, ...participantData } = data;
+      
+      console.log("Data yang akan disimpan:", participantData);
+      if (custom_fields && Object.keys(custom_fields).length > 0) {
+        console.log("Custom fields (belum disimpan):", custom_fields);
+      }
+      
+      const { data: result, error } = await supabase
         .from("participants")
-        .insert([{ ...data, user_id: user?.id }]);
+        .insert([{ ...participantData, user_id: user?.id }])
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
 
+      console.log("Data berhasil disimpan:", result);
       fetchParticipants();
     } catch (error) {
       console.error("Gagal menambahkan peserta:", error);
@@ -100,12 +113,23 @@ export function Dashboard() {
 
     setSubmitting(true);
     try {
+      // Pisahkan custom_fields dari data utama karena kolom ini belum ada di database
+      const { custom_fields, ...participantData } = data;
+      
+      console.log("Data yang akan diupdate:", participantData);
+      if (custom_fields && Object.keys(custom_fields).length > 0) {
+        console.log("Custom fields (belum disimpan):", custom_fields);
+      }
+      
       const { error } = await supabase
         .from("participants")
-        .update(data)
+        .update(participantData)
         .eq("id", editingParticipant.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
 
       setEditingParticipant(null);
       setShowEditModal(false);

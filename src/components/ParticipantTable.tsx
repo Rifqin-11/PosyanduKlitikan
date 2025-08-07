@@ -1,6 +1,6 @@
 import { useState } from "react";
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import {
   Table,
   TableBody,
@@ -29,7 +29,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Edit, Trash2, Users, Calendar, Download } from "lucide-react";
 import { Participant } from "@/lib/supabase";
 import { format } from "date-fns";
@@ -50,7 +56,6 @@ export function ParticipantTable({
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [bmiFilter, setBmiFilter] = useState("all");
-
 
   const handleDelete = () => {
     if (deleteId) {
@@ -91,63 +96,68 @@ export function ParticipantTable({
   const exportToExcel = () => {
     // Prepare data for export
     const exportData = filteredParticipants.map((participant, index) => ({
-      'No': index + 1,
-      'NIK': participant.nik,
-      'Nama Lengkap': participant.name,
-      'Tanggal Lahir': formatDate(participant.date_of_birth),
-      'Umur': calculateAge(participant.date_of_birth),
-      'Alamat': participant.address,
-      'Berat Badan (kg)': participant.bb,
-      'Tinggi Badan (cm)': participant.tb,
-      'BMI': calculateBMI(participant.bb, participant.tb).toFixed(1),
-      'Status BMI': getBMIStatus(calculateBMI(participant.bb, participant.tb)),
-      'LILA (cm)': participant.lila,
-      'GDS (mg/dL)': participant.gds,
-      'AU': participant.au,
-      'Imunisasi': participant.immunization,
-      'LP (cm)': participant.lp,
-      'TD (mmHg)': participant.td,
-      'HB (g/dL)': participant.hb,
-      'Kolesterol (mg/dL)': participant.chol,
-      'Tanggal Input': formatDate(participant.created_at),
+      No: index + 1,
+      NIK: participant.nik,
+      "Nama Lengkap": participant.name,
+      "Tanggal Lahir": formatDate(participant.date_of_birth),
+      Umur: calculateAge(participant.date_of_birth),
+      Alamat: participant.address,
+      "Berat Badan (kg)": participant.bb,
+      "Tinggi Badan (cm)": participant.tb,
+      BMI: calculateBMI(participant.bb, participant.tb).toFixed(1),
+      "Status BMI": getBMIStatus(calculateBMI(participant.bb, participant.tb)),
+      "LILA (cm)": participant.lila,
+      "GDS (mg/dL)": participant.gds,
+      AU: participant.au,
+      Imunisasi: participant.immunization,
+      "LP (cm)": participant.lp,
+      "TD (mmHg)": participant.td,
+      "HB (g/dL)": participant.hb,
+      "Kolesterol (mg/dL)": participant.chol,
+      "Tanggal Input": formatDate(participant.created_at),
     }));
 
     // Create workbook and worksheet
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Peserta');
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data Peserta");
 
     // Set column widths
     const colWidths = [
-      { wch: 5 },   // No
-      { wch: 18 },  // NIK
-      { wch: 25 },  // Nama
-      { wch: 15 },  // Tanggal Lahir
-      { wch: 8 },   // Umur
-      { wch: 30 },  // Alamat
-      { wch: 12 },  // BB
-      { wch: 12 },  // TB
-      { wch: 8 },   // BMI
-      { wch: 15 },  // Status BMI
-      { wch: 10 },  // LILA
-      { wch: 10 },  // GDS
-      { wch: 8 },   // AU
-      { wch: 15 },  // Imunisasi
-      { wch: 8 },   // LP
-      { wch: 12 },  // TD
-      { wch: 10 },  // HB
-      { wch: 15 },  // Kolesterol
-      { wch: 15 },  // Tanggal Input
+      { wch: 5 }, // No
+      { wch: 18 }, // NIK
+      { wch: 25 }, // Nama
+      { wch: 15 }, // Tanggal Lahir
+      { wch: 8 }, // Umur
+      { wch: 30 }, // Alamat
+      { wch: 12 }, // BB
+      { wch: 12 }, // TB
+      { wch: 8 }, // BMI
+      { wch: 15 }, // Status BMI
+      { wch: 10 }, // LILA
+      { wch: 10 }, // GDS
+      { wch: 8 }, // AU
+      { wch: 15 }, // Imunisasi
+      { wch: 8 }, // LP
+      { wch: 12 }, // TD
+      { wch: 10 }, // HB
+      { wch: 15 }, // Kolesterol
+      { wch: 15 }, // Tanggal Input
     ];
-    worksheet['!cols'] = colWidths;
+    worksheet["!cols"] = colWidths;
 
     // Generate file name with current date
-    const currentDate = format(new Date(), 'yyyy-MM-dd_HH-mm');
+    const currentDate = format(new Date(), "yyyy-MM-dd_HH-mm");
     const fileName = `Data_Peserta_Posyandu_${currentDate}.xlsx`;
 
     // Save file
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
     saveAs(blob, fileName);
   };
 
@@ -158,7 +168,6 @@ export function ParticipantTable({
     if (bmi < 30) return { text: "Gemuk", variant: "destructive" as const };
     return { text: "Obesitas", variant: "destructive" as const };
   };
-
 
   const filteredParticipants = participants.filter((participant) => {
     const query = searchQuery.toLowerCase();
@@ -173,8 +182,6 @@ export function ParticipantTable({
 
     return matchesSearch && matchesBMI;
   });
-
-
 
   if (loading) {
     return (
