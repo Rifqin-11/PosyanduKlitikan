@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { LogOut, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,12 +48,7 @@ export function Dashboard() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-
-  useEffect(() => {
-    fetchParticipants();
-  }, []);
-
-  const fetchParticipants = async () => {
+  const fetchParticipants = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("participants")
@@ -72,7 +67,11 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchParticipants();
+  }, [fetchParticipants]);
 
   const handleAddParticipant = async (data: ParticipantFormData) => {
     setSubmitting(true);
@@ -82,11 +81,6 @@ export function Dashboard() {
         .insert([{ ...data, user_id: user?.id }]);
 
       if (error) throw error;
-
-      toast({
-        title: "Berhasil",
-        description: "Peserta berhasil ditambahkan",
-      });
 
       fetchParticipants();
     } catch (error) {
@@ -112,11 +106,6 @@ export function Dashboard() {
         .eq("id", editingParticipant.id);
 
       if (error) throw error;
-
-      toast({
-        title: "Berhasil",
-        description: "Data peserta berhasil diperbarui",
-      });
 
       setEditingParticipant(null);
       setShowEditModal(false);
